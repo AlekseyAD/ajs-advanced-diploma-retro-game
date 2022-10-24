@@ -1,0 +1,27 @@
+import Character from '../Character';
+import Bowman from '../Characters/Bowman';
+import Swordsman from '../Characters/Swordsman';
+
+test('Ошибка создание персонажа с указанным классом', () => {
+  expect(() => new Character(1, 'bowman')).toThrowError(
+    new Error('Персонажа такого класса создать нельзя')
+  );
+});
+
+test('Нет ошибки создание персонажа с указанным классом', () => {
+  expect(() => new Bowman(1, 'bowman')).not.toThrowError();
+});
+
+
+test('Создание класса Мечник', () => {
+  expect(new Swordsman(1, 'swordsman')).toEqual({
+    level: 1,
+    attack: 40,
+    defence: 10,
+    health: 100,
+    type: 'swordsman',
+    distance: 4,
+    attackRange: 1,
+    class: "Мечник"
+  });
+});

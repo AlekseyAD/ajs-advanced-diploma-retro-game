@@ -20,7 +20,9 @@ import Magician from './Characters/Magician';
 
 export default class Team {
   // TODO: write your logic here
-
+  constructor() {
+    this.userHero = [Bowman, Swordsman, Magician];
+  }
   static playerHeroes() {
     return [Magician, Bowman, Swordsman];
   }
@@ -28,4 +30,5 @@ export default class Team {
   static aiHeroes() {
     return [Daemon, Undead, Vampire];
   }
+  
 }
