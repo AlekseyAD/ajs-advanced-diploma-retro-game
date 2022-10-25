@@ -52,13 +52,16 @@ export default class GameController {
       this.playerPositions[i].position = coordinates.user[i];
       this.aiPositions[i].position = coordinates.ai[i];
     }
+    console.log(coordinates);
+    console.log(this.playerPositions.length);
     this.gamePlay.drawUi(this.defaultTheme);
     this.gamePlay.redrawPositions([
       ...this.playerPositions,
       ...this.aiPositions,
     ]);
 
-    
+    console.log(this.playerPositions);
+    console.log(this.aiPositions);
   }
 
   positionTeams(playerTeam, aiTeam) {
