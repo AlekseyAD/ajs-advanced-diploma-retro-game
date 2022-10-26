@@ -26,6 +26,9 @@ export default class GameController {
     this.playerPositions = [];
     this.aiPositions = [];
     this.allCell = [];
+
+    this.selected = null;
+    this.isUsersTurn = true;
   }
 
   init() {
@@ -37,7 +40,10 @@ export default class GameController {
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
     this.startGame();
 
-    console.log(this.allCell[0].position);
+    // console.log(this.allCell[0].position);
+    // console.log(this.aiPositions[0].position);
+    // console.log(this.playerTeam.length);
+    //console.log(this.selected);
   }
 
   startGame() {
@@ -52,16 +58,17 @@ export default class GameController {
       this.playerPositions[i].position = coordinates.user[i];
       this.aiPositions[i].position = coordinates.ai[i];
     }
-    console.log(coordinates);
-    console.log(this.playerPositions.length);
+    //console.log(this.playerTeam);
+    //console.log(coordinates);
+    //console.log(this.playerPositions.length);
     this.gamePlay.drawUi(this.defaultTheme);
     this.gamePlay.redrawPositions([
       ...this.playerPositions,
       ...this.aiPositions,
     ]);
 
-    console.log(this.playerPositions);
-    console.log(this.aiPositions);
+    // console.log(this.playerPositions);
+    // console.log(this.aiPositions);
   }
 
   positionTeams(playerTeam, aiTeam) {
@@ -105,7 +112,9 @@ export default class GameController {
 
   onCellClick(index) {
     // TODO: react to click
-    console.log(this.getPositionedCharacter(index));
+    
+
+    this.gameState.selected = index;
 
     if (this.getPositionedCharacter(index) && this.thisUser(index)) {
       this.gamePlay.cells.forEach((element) =>
@@ -117,35 +126,211 @@ export default class GameController {
       this.gamePlay.selectCell(index);
       this.gameState.selected = index;
     }
+    if (this.gameState.level === 2 || this.playerTeam.length === 0) {
+      return;
+    }
+
+    // Реализация атаки
+    if (
+      this.gameState.selected !== null &&
+      this.getPositionedCharacter(index) &&
+      this.thisBotChar(index)
+    ) {
+      if (this.isAttack(index)) {
+        this.getAttack(index, this.gameState.selected);
+      }
+    }
+    //console.log(index);
+    console.log(this.isMoving(index));
+    // console.log(this.getPositionedCharacter(index));
+    //console.log(this.thisBotChar(index));
+    // перемещение персонажа игрока
+    //if (this.selected !== null && this.isMoving(index) && !this.getPositionedCharacter(index)) {
+    if (this.isMoving(index)) {
+      if (this.isUsersTurn) {
+        this.getUsersTurn(index);
+      }
+    }
+
+    // Если не валидный ход, то показываем сообщение об ошибке
+    if (
+      this.gameState.selected !== null &&
+      !this.isMoving(index) &&
+      !this.isAttack(index)
+    ) {
+      if (this.gameState.isUsersTurn && !this.getPositionedCharacter(index)) {
+        GamePlay.showError('Недопустимый ход');
+      }
+    }
+
+    // Если ячейка пустая то при клике на неё return
+    if (!this.getPositionedCharacter(index)) {
+      return;
+    }
+
+    // Если клик на бота, то показываем сообщение об ошибке
+    if (
+      this.getPositionedCharacter(index) &&
+      this.thisBotChar(index) &&
+      !this.isAttack(index)
+    ) {
+      alert('Это не ваш персонаж');
+    }
   }
 
   onCellEnter(index) {
+    if (this.thisUser(index)) {
+      this.gamePlay.selectCell(index);
+    }
+
     // TODO: react to mouse enter
     if (this.getPositionedCharacter(index)) {
       const hero = this.getPositionedCharacter(index).character;
       const message = `\u{1F538}${hero.class}\u{1F396}${hero.level}\u{2694}${hero.attack}\u{1F6E1}${hero.defence}\u{2764}${hero.health}`;
       this.gamePlay.showCellTooltip(message, index);
     }
+
+    // Если в ячейке персонаж игрока, то при наведении на ячейку курсор = pointer
+    if (this.getPositionedCharacter(index) && this.thisUser(index)) {
+      this.gamePlay.setCursor(cursors.pointer);
+    }
+    // Если валидный диапазон перемещения, то при наведении выделяем ячейку зелёным
+    if (
+      this.gameState.selected !== null &&
+      !this.getPositionedCharacter(index) &&
+      this.isMoving(index)
+    ) {
+      this.gamePlay.setCursor(cursors.pointer);
+      this.gamePlay.selectCell(index, 'green');
+    }
+    // Если валидный диапазон атаки, то при наведении выделяем ячейку красным
+    if (
+      this.gameState.selected !== null &&
+      this.getPositionedCharacter(index) &&
+      !this.thisUser(index)
+    ) {
+      if (this.isAttack(index)) {
+        this.gamePlay.setCursor(cursors.crosshair);
+        this.gamePlay.selectCell(index, 'red');
+      }
+    }
+    // Если не валидные диапазоны атаки и перемещения и бот, то при наведении курсор = notallowed
+    if (
+      this.gameState.selected !== null &&
+      !this.isAttack(index) &&
+      !this.isMoving(index)
+    ) {
+      if (!this.thisUser(index)) {
+        this.gamePlay.setCursor(cursors.notallowed);
+      }
+    }
   }
 
   onCellLeave(index) {
     // TODO: react to mouse leave
-    // if (this.selectedCharacter.position !== index) {
-    //   this.gamePlay.deselectCell(index);
-    // }
-    // this.gamePlay.hideCellTooltip(index);
-    // this.gamePlay.setCursor(cursors.auto);
+    this.gamePlay.cells.forEach((elem) =>
+      elem.classList.remove('selected-red')
+    );
+    this.gamePlay.cells.forEach((elem) =>
+      elem.classList.remove('selected-green')
+    );
+    //this.gamePlay.hideCellTooltip(index);
+    //this.gamePlay.setCursor(cursors.auto);
   }
 
   thisUser(index) {
     if (this.getPositionedCharacter(index)) {
-      const character = this.getPositionedCharacter(index).character;
-      return this.userHero.some((element) => character instanceof element);
+      const user = this.getPositionedCharacter(index).character;
+      return this.userHero.some((element) => user instanceof element);
+    }
+    return false;
+  }
+  thisBotChar(index) {
+    if (this.getPositionedCharacter(index)) {
+      const ai = this.getPositionedCharacter(index).character;
+      return this.aiHero.some((elem) => ai instanceof elem);
+    }
+    return false;
+  }
+  getPositionedCharacter(index) {
+    return this.allCell.find((element) => element.position === index);
+  }
+
+  getSelectedChar() {
+    return this.allCell.find(
+      (elem) => elem.position === this.gameState.selected
+    );
+  }
+
+  isMoving(idx) {
+    if (this.getSelectedChar()) {
+      const moving = this.getSelectedChar().character.distance;
+      const arr = this.calcRange(this.gameState.selected, moving);
+      return arr.includes(idx);
+    }
+    return false;
+  }
+  getUsersTurn(idx) {
+    this.getSelectedChar().position = idx;
+    this.gamePlay.deselectCell(this.gameState.selected);
+    this.gamePlay.redrawPositions(this.allCell);
+    this.gameState.selected = idx;
+    this.gameState.isUsersTurn = false;
+    //this.getBotsResponse();
+  }
+  isAttack(idx) {
+    if (this.getSelectedChar()) {
+      const stroke = this.getSelectedChar().character.attackRange;
+      const arr = this.calcRange(this.gameState.selected, stroke);
+      return arr.includes(idx);
     }
     return false;
   }
 
-  getPositionedCharacter(index) {
-    return this.allCell.find((element) => element.position === index);
+  calcRange(idx, char) {
+    const brdSize = this.gamePlay.boardSize;
+    const range = [];
+    const leftBorder = [];
+    const rightBorder = [];
+
+    for (
+      let i = 0, j = brdSize - 1;
+      leftBorder.length < brdSize;
+      i += brdSize, j += brdSize
+    ) {
+      leftBorder.push(i);
+      rightBorder.push(j);
+    }
+
+    for (let i = 1; i <= char; i += 1) {
+      range.push(idx + brdSize * i);
+      range.push(idx - brdSize * i);
+    }
+
+    for (let i = 1; i <= char; i += 1) {
+      if (leftBorder.includes(idx)) {
+        break;
+      }
+      range.push(idx - i);
+      range.push(idx - (brdSize * i + i));
+      range.push(idx + (brdSize * i - i));
+      if (leftBorder.includes(idx - i)) {
+        break;
+      }
+    }
+
+    for (let i = 1; i <= char; i += 1) {
+      if (rightBorder.includes(idx)) {
+        break;
+      }
+      range.push(idx + i);
+      range.push(idx - (brdSize * i - i));
+      range.push(idx + (brdSize * i + i));
+      if (rightBorder.includes(idx + i)) {
+        break;
+      }
+    }
+
+    return range.filter((elem) => elem >= 0 && elem <= brdSize ** 2 - 1);
   }
 }
